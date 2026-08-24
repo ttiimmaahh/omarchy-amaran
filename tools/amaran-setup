@@ -94,6 +94,63 @@ unique_key() {
   UNIQUE_KEY_RESULT="$candidate"
 }
 
+repair_duplicate_keys() {
+  local file="$1" result
+  [[ -f $file ]] || return 0
+  if ! command -v node >/dev/null; then
+    warn "Cannot check for duplicate fixture keys because node is not on PATH."
+    return 0
+  fi
+
+  result=$(node - "$file" <<'NODE'
+const fs = require("fs");
+const file = process.argv[2];
+const config = JSON.parse(fs.readFileSync(file, "utf8"));
+if (!Array.isArray(config.lights)) process.exit(0);
+
+const used = new Set();
+let changed = false;
+
+function slug(name, address) {
+  const base = String(name || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "")
+    .slice(0, 8);
+  return base || `light${address || used.size + 1}`;
+}
+
+for (const light of config.lights) {
+  const current = String(light.key || "");
+  const base = slug(light.name, light.address);
+  let next = current || base;
+
+  if (used.has(next)) {
+    const suffix = light.address || used.size + 1;
+    next = `${base}${suffix}`;
+    let n = 2;
+    while (used.has(next)) next = `${base}${suffix}${n++}`;
+  }
+
+  used.add(next);
+  if (next !== current) {
+    light.key = next;
+    changed = true;
+  }
+}
+
+if (changed) {
+  fs.writeFileSync(file, JSON.stringify(config, null, 2) + "\n");
+  console.log("repaired");
+}
+NODE
+  ) || { err "Could not validate $file"; return 1; }
+
+  if [[ $result == repaired ]]; then
+    ok "Repaired duplicate fixture keys in $file"
+    dim "Each fixture needs its own key, otherwise individual controls collapse together."
+  fi
+}
+
 bold "amaran light setup"
 echo
 cat <<'INTRO'
@@ -228,6 +285,8 @@ JSON
     ok "Wrote $CONFIG"
   fi
 fi
+
+repair_duplicate_keys "$CONFIG" || pause_exit 1
 
 echo
 

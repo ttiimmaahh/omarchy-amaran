@@ -1,0 +1,31 @@
+# systemd user unit for the amaran BLE mesh daemon.
+#
+#   mkdir -p ~/.config/systemd/user
+#   cp amaran-daemon.service ~/.config/systemd/user/
+#   $EDITOR ~/.config/systemd/user/amaran-daemon.service   # fix WorkingDirectory
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now amaran-daemon
+#
+# The daemon reads lights.json from its working directory, so WorkingDirectory
+# must be the checkout that holds your generated lights.json.
+
+[Unit]
+Description=amaran BLE mesh daemon (REST API for amaran/Aputure lights)
+Documentation=https://github.com/wesbos/amaran-BLE-control
+After=bluetooth.target
+Wants=bluetooth.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/amaran-BLE-control
+ExecStart=/usr/bin/npx tsx src/daemon.ts
+Restart=on-failure
+RestartSec=5
+
+# The daemon speaks raw HCI through noble, which needs CAP_NET_RAW. Granting it
+# to the binary once is cleaner than running the whole thing as root:
+#   sudo setcap cap_net_raw+eip "$(readlink -f "$(which node)")"
+# Re-run that after every Node upgrade, since it applies to the binary.
+
+[Install]
+WantedBy=default.target

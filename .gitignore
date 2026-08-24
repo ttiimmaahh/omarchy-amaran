@@ -1,0 +1,5 @@
+# Mesh credentials — never commit these.
+lights.json
+*.db
+
+node_modules/

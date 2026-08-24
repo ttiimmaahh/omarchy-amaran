@@ -94,16 +94,14 @@ ESP32 bridge. Set **host** in the widget settings, and have the daemon listen
 beyond loopback (`"http": { "host": "0.0.0.0", "apiKey": "…" }` in its
 `lights.json`) — set an `apiKey`, because that API is otherwise unauthenticated.
 
-To keep a local daemon running across logins, install
-`tools/amaran-daemon.service`:
+To keep a local daemon running across logins, let the wizard install the
+systemd user service — it offers to at the end, and generates the unit with
+your real paths. That matters: a systemd user unit does not inherit your
+shell's `PATH`, so a version-managed Node (mise, nvm, asdf, fnm) is invisible
+to it, and a hand-copied unit with `ExecStart=/usr/bin/npx` will not start.
 
-```bash
-mkdir -p ~/.config/systemd/user
-cp tools/amaran-daemon.service ~/.config/systemd/user/
-$EDITOR ~/.config/systemd/user/amaran-daemon.service   # set WorkingDirectory
-systemctl --user daemon-reload
-systemctl --user enable --now amaran-daemon
-```
+`tools/amaran-daemon.service` is a fallback template if you would rather do it
+by hand; edit **both** `WorkingDirectory` and `ExecStart` before enabling it.
 
 ## Settings
 
@@ -174,6 +172,15 @@ Click **Set up lights…**, or read [SETUP.md](SETUP.md).
 
 **"Cannot reach the daemon"** — the daemon is not running or not listening
 where the widget is looking. `curl http://<host>:2708/` from this machine.
+
+**`Failed to enable unit: Unit amaran-daemon.service does not exist`** — the
+unit was never installed. Re-run `tools/amaran-setup` and accept the systemd
+step, or copy the template in by hand as described above.
+
+**The service is enabled but dies immediately** — almost always `ExecStart`
+pointing at a Node that is not there. Check with
+`systemctl --user status amaran-daemon`, and compare its `ExecStart` against
+`readlink -f "$(command -v node)"`. Re-running the wizard rewrites it.
 
 **"Daemon rejected the API key"** — `apiKey` here does not match `http.apiKey`
 in the daemon's `lights.json`.

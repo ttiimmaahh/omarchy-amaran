@@ -1,26 +1,37 @@
-# systemd user unit for the amaran BLE mesh daemon.
+# Fallback template. Prefer `tools/amaran-setup`, which generates this file
+# with your actual paths filled in — the two placeholders below are the usual
+# cause of a service that installs fine and then never starts.
 #
 #   mkdir -p ~/.config/systemd/user
 #   cp amaran-daemon.service ~/.config/systemd/user/
-#   $EDITOR ~/.config/systemd/user/amaran-daemon.service   # fix WorkingDirectory
+#   $EDITOR ~/.config/systemd/user/amaran-daemon.service   # fix BOTH paths
 #   systemctl --user daemon-reload
 #   systemctl --user enable --now amaran-daemon
 #
-# The daemon reads lights.json from its working directory, so WorkingDirectory
-# must be the checkout that holds your generated lights.json.
+# WorkingDirectory must be the checkout holding your lights.json: the daemon
+# reads it from the current directory, not from an absolute path.
+#
+# ExecStart must be ABSOLUTE. A systemd user unit does not inherit your shell's
+# PATH, so a version-managed Node (mise, nvm, asdf, fnm) is invisible to it.
+# Find yours with:
+#
+#   readlink -f "$(command -v node)"
+#
+# and use "<that> <WorkingDirectory>/node_modules/.bin/tsx src/daemon.ts".
 
 [Unit]
 Description=amaran BLE mesh daemon (REST API for amaran/Aputure lights)
 Documentation=https://github.com/wesbos/amaran-BLE-control
-After=bluetooth.target
+After=bluetooth.target network.target
 Wants=bluetooth.target
 
 [Service]
 Type=simple
 WorkingDirectory=%h/amaran-BLE-control
-ExecStart=/usr/bin/npx tsx src/daemon.ts
+ExecStart=/usr/bin/node %h/amaran-BLE-control/node_modules/.bin/tsx src/daemon.ts
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
 Restart=on-failure
-RestartSec=5
+RestartSec=10
 
 # The daemon speaks raw HCI through noble, which needs CAP_NET_RAW. Granting it
 # to the binary once is cleaner than running the whole thing as root:

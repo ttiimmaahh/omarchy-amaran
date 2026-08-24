@@ -151,6 +151,12 @@ not exist for these fixtures today.
 **The daemon starts but finds no lights.** Close amaran Desktop and quit the
 phone app. A fixture already serving one proxy client will refuse a second.
 
+**`/sys/class/bluetooth` exists but `bluetoothctl list` is empty.** The
+`bluetooth` kernel module is loaded but no `hci*` adapter registered — the
+radio is not reaching the kernel at all. That is a firmware/BIOS/enumeration
+problem, not a daemon one; check `sudo dmesg | grep -i -E 'bluetooth|usb'` for
+errors like `device descriptor read/64, error -110`.
+
 **The daemon cannot open the adapter.** On Linux it needs raw HCI access:
 
 ```bash

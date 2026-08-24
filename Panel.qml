@@ -49,6 +49,7 @@ Panel {
   // asks for a highlight, so an untouched panel opens without one.
   property bool cursorActive: false
   property int cursorRow: 0
+  property bool sliderDragging: false
 
   // A flat list of everything the cursor can land on, in visual order: the
   // master switch, then power / brightness / temperature for each fixture.
@@ -56,8 +57,10 @@ Panel {
     var targets = [{ kind: "master", light: -1 }]
     for (var i = 0; i < amaran.lights.length; i++) {
       targets.push({ kind: "power", light: i })
-      targets.push({ kind: "level", light: i })
-      targets.push({ kind: "temp", light: i })
+      if (amaran.lights[i].on) {
+        targets.push({ kind: "level", light: i })
+        targets.push({ kind: "temp", light: i })
+      }
     }
     return targets
   }
@@ -91,7 +94,7 @@ Panel {
     var target = cursorTarget
     if (!target) return
     var light = target.light >= 0 ? amaran.lights[target.light] : null
-    if (!light) return
+    if (!light || !light.on) return
     if (target.kind === "level") amaran.setBrightness(light.key, light.brightness + direction * 5)
     else if (target.kind === "temp") amaran.setKelvin(light.key, light.kelvin + direction * 100)
   }
@@ -111,7 +114,10 @@ Panel {
 
   onOpenedChanged: {
     if (opened) amaran.refresh()
-    else cursorActive = false
+    else {
+      cursorActive = false
+      sliderDragging = false
+    }
   }
 
   Service {
@@ -202,7 +208,7 @@ Panel {
         Binding {
           target: scrollArea.contentItem
           property: "interactive"
-          value: panelColumn.implicitHeight > scrollArea.height
+          value: panelColumn.implicitHeight > scrollArea.height && !root.sliderDragging
         }
 
         Column {
@@ -426,8 +432,9 @@ Panel {
         value: card.light.brightness
         fillColor: root.foreground
         faded: !card.light.on
+        enabled: card.light.on
         onHoveredIn: root.setCursor("level", card.lightIndex)
-        onMovedTo: function (v) { amaran.setBrightness(card.light.key, v) }
+        onMovedTo: function (v) { if (card.light.on) amaran.setBrightness(card.light.key, v) }
       }
 
       // ---- Colour temperature ----
@@ -443,9 +450,11 @@ Panel {
         // Tint the fill with the temperature being dialled in: warm amber at
         // the bottom of the range, daylight blue-white at the top.
         fillColor: Model.kelvinToColor(card.light.kelvin)
+        temperature: true
         faded: !card.light.on
+        enabled: card.light.on
         onHoveredIn: root.setCursor("temp", card.lightIndex)
-        onMovedTo: function (v) { amaran.setKelvin(card.light.key, v) }
+        onMovedTo: function (v) { if (card.light.on) amaran.setKelvin(card.light.key, v) }
       }
     }
   }
@@ -464,6 +473,7 @@ Panel {
     property color fillColor: root.foreground
     property bool hasCursor: false
     property bool faded: false
+    property bool temperature: false
 
     signal hoveredIn()
     signal movedTo(real value)
@@ -489,7 +499,9 @@ Panel {
 
     Text {
       id: rowValue
-      text: sliderRow.valueText
+      text: slider.dragging
+        ? (sliderRow.temperature ? Model.formatKelvin(slider.liveValue) : Model.formatPercent(slider.liveValue))
+        : sliderRow.valueText
       color: root.dim
       font.family: root.fontFamily
       font.pixelSize: Style.font.caption
@@ -507,15 +519,15 @@ Panel {
       step: sliderRow.step
       integer: true
       value: sliderRow.value
-      fillColor: sliderRow.fillColor
-      knobColor: sliderRow.fillColor
+      fillColor: sliderRow.temperature && slider.dragging ? Model.kelvinToColor(slider.liveValue) : sliderRow.fillColor
+      knobColor: sliderRow.temperature && slider.dragging ? Model.kelvinToColor(slider.liveValue) : sliderRow.fillColor
       anchors.left: rowGlyph.right
       anchors.leftMargin: Style.space(8)
       anchors.right: rowValue.left
       anchors.rightMargin: Style.space(8)
       anchors.verticalCenter: parent.verticalCenter
 
-      onMoved: function (v) { sliderRow.movedTo(v) }
+      onDraggingChanged: root.sliderDragging = slider.dragging
       onReleased: function (v) { sliderRow.movedTo(v) }
     }
 

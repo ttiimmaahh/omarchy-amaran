@@ -141,6 +141,12 @@ Panel {
     function refresh(): void { amaran.refresh() }
   }
 
+  // The bar sizes each slot from the widget root's implicit size, so a root
+  // that never sets one collapses to zero width and renders nothing. Lift it
+  // off the button, the way every first-party widget does.
+  implicitWidth: button.implicitWidth
+  implicitHeight: button.implicitHeight
+
   BarIconButton {
     id: button
     anchors.fill: parent

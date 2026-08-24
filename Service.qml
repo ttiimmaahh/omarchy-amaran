@@ -52,7 +52,8 @@ Item {
 
   // Where the BLE daemon (and its key-bearing lights.json) lives, so the
   // panel's setup button can hand the wizard the right directory.
-  readonly property string daemonDir: String(setting("daemonDir", Quickshell.env("HOME") + "/amaran-BLE-control"))
+  readonly property string daemonDir: String(setting("daemonDir",
+    (Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")) + "/amaran-BLE-control"))
 
   readonly property string home: Quickshell.env("HOME")
   readonly property string statePath: home + "/.local/state/omarchy-amaran/state.json"

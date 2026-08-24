@@ -106,7 +106,7 @@ address, and writes the config for you.
 
 ## Where the keys end up
 
-In `lights.json`, in the daemon's directory — `~/amaran-BLE-control/lights.json`
+In `lights.json`, in the daemon's directory — `~/.config/amaran-BLE-control/lights.json`
 by default. The widget itself never stores them.
 
 That is deliberate. Omarchy's `shell.json` is a normal-permission config file

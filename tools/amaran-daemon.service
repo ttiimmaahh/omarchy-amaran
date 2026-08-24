@@ -27,8 +27,8 @@ Wants=bluetooth.target
 
 [Service]
 Type=simple
-WorkingDirectory=%h/amaran-BLE-control
-ExecStart=/usr/bin/node %h/amaran-BLE-control/node_modules/.bin/tsx src/daemon.ts
+WorkingDirectory=%h/.config/amaran-BLE-control
+ExecStart=/usr/bin/node %h/.config/amaran-BLE-control/node_modules/.bin/tsx src/daemon.ts
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
 Restart=on-failure
 RestartSec=10

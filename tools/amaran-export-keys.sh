@@ -99,4 +99,4 @@ umask 077
 chmod 600 "$OUT"
 echo "Wrote $OUT ($(echo "$FIXTURES" | wc -l | tr -d ' ') lights)" >&2
 echo "This file contains your mesh keys. Copy it privately, e.g.:" >&2
-echo "  scp $OUT you@linux-box:~/amaran-BLE-control/lights.json" >&2
+echo "  scp $OUT you@linux-box:~/.config/amaran-BLE-control/lights.json" >&2

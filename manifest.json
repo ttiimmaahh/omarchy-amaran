@@ -26,7 +26,7 @@
       "minKelvin": 2700,
       "maxKelvin": 6500,
       "hideWhenUnreachable": false,
-      "daemonDir": "~/amaran-BLE-control"
+      "daemonDir": "~/.config/amaran-BLE-control"
     },
     "schema": [
       {
@@ -57,7 +57,7 @@
         "type": "string",
         "label": "Daemon directory",
         "description": "Where the amaran BLE daemon and its key-bearing lights.json live. Used by the panel's setup button.",
-        "defaultValue": "~/amaran-BLE-control"
+        "defaultValue": "~/.config/amaran-BLE-control"
       },
       {
         "key": "refreshIntervalSec",

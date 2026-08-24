@@ -113,7 +113,7 @@ hot-reloads on save.
 | `host` | `127.0.0.1` | Machine running the amaran daemon |
 | `port` | `2708` | Daemon port |
 | `apiKey` | `""` | Sent as `Authorization: Bearer …`; must match the daemon |
-| `daemonDir` | `~/amaran-BLE-control` | Where the daemon and its `lights.json` live; used by the setup button |
+| `daemonDir` | `~/.config/amaran-BLE-control` | Where the daemon and its `lights.json` live; used by the setup button |
 | `refreshIntervalSec` | `15` | How often the fixture roster is re-fetched |
 | `minKelvin` | `2700` | Warm end of the temperature slider |
 | `maxKelvin` | `6500` | Cool end of the temperature slider |

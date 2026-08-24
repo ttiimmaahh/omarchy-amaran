@@ -8,7 +8,18 @@
 
 set -uo pipefail
 
-DAEMON_DIR="${1:-$HOME/amaran-BLE-control}"
+CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+DEFAULT_DIR="$CONFIG_HOME/amaran-BLE-control"
+
+# An earlier version defaulted to ~/amaran-BLE-control. If someone already has
+# a checkout there, keep using it rather than quietly cloning a second copy —
+# theirs is the one holding their keys.
+LEGACY_DIR="$HOME/amaran-BLE-control"
+if [[ -z ${1:-} && ! -d $DEFAULT_DIR && -d $LEGACY_DIR ]]; then
+  DEFAULT_DIR="$LEGACY_DIR"
+fi
+
+DAEMON_DIR="${1:-$DEFAULT_DIR}"
 REPO_URL="https://github.com/wesbos/amaran-BLE-control.git"
 
 bold()  { printf '\033[1m%s\033[0m\n' "$*"; }

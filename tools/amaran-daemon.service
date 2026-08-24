@@ -21,22 +21,23 @@
 
 [Unit]
 Description=amaran BLE mesh daemon (REST API for amaran/Aputure lights)
-Documentation=https://github.com/wesbos/amaran-BLE-control
-After=bluetooth.target network.target
-Wants=bluetooth.target
+Documentation=https://github.com/ttiimmaahh/amaran-BLE-control
+After=network.target
 
 [Service]
 Type=simple
 WorkingDirectory=%h/.config/amaran-BLE-control
+# User services cannot start the system bluetooth.service. Fail before Node
+# launches if BlueZ is down, because the Linux D-Bus transport depends on it.
+ExecStartPre=/usr/bin/systemctl is-active --quiet bluetooth.service
 ExecStart=/usr/bin/node %h/.config/amaran-BLE-control/node_modules/.bin/tsx src/daemon.ts
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
 Restart=on-failure
 RestartSec=10
 
-# The daemon speaks raw HCI through noble, which needs CAP_NET_RAW. Granting it
-# to the binary once is cleaner than running the whole thing as root:
-#   sudo setcap cap_net_raw+eip "$(readlink -f "$(which node)")"
-# Re-run that after every Node upgrade, since it applies to the binary.
+# A patched BlueZ D-Bus transport needs no raw-HCI capabilities on node. If an
+# earlier attempt granted them, you can remove them with:
+#   sudo setcap -r "$(readlink -f "$(which node)")"
 
 [Install]
 WantedBy=default.target

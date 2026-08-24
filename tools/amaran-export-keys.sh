@@ -17,6 +17,28 @@ OUT="${1:-lights.json}"
 
 die() { echo "amaran-export-keys: $*" >&2; exit 1; }
 
+# Turn a fixture name into a stable daemon key, and suffix duplicates with the
+# mesh address. Plain string bookkeeping keeps this compatible with macOS's
+# older /bin/bash, which has no associative arrays.
+USED_KEYS="|"
+UNIQUE_KEY_RESULT=""
+unique_key() {
+  local base="$1" suffix="$2" candidate n
+  candidate="$base"
+  [[ -n $candidate ]] || candidate="light$suffix"
+  if [[ $USED_KEYS == *"|$candidate|"* ]]; then
+    candidate="${base}${suffix}"
+    [[ -n $base ]] || candidate="light$suffix"
+    n=2
+    while [[ $USED_KEYS == *"|$candidate|"* ]]; do
+      candidate="${base}${suffix}${n}"
+      n=$((n + 1))
+    done
+  fi
+  USED_KEYS+="$candidate|"
+  UNIQUE_KEY_RESULT="$candidate"
+}
+
 command -v sqlite3 >/dev/null || die "sqlite3 not found. On macOS it ships with the OS; otherwise install it."
 
 find_db() {
@@ -83,8 +105,9 @@ umask 077
   FIRST=1
   while IFS='|' read -r mac address name; do
     [[ -n $mac ]] || continue
-    key=$(echo "$name" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9' | cut -c1-8)
-    [[ -n $key ]] || key="light$address"
+    key_base=$(echo "$name" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9' | cut -c1-8)
+    unique_key "$key_base" "$address"
+    key="$UNIQUE_KEY_RESULT"
     [[ $FIRST -eq 1 ]] || echo ","
     FIRST=0
     printf '    { "key": "%s", "name": "%s", "mac": "%s", "address": %s }' \

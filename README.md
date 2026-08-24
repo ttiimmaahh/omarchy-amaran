@@ -17,13 +17,13 @@ one click from the top of the screen.
 
 amaran fixtures have no Wi-Fi and no network API. They speak a proprietary
 Telink Bluetooth Mesh dialect, so something has to hold a BLE connection and
-translate. This widget does not do that itself — it drives the REST API of
-[wesbos/amaran-BLE-control](https://github.com/wesbos/amaran-BLE-control),
-which is the project that reverse-engineered the mesh protocol.
+translate. This widget does not do that itself — it drives the REST API of a
+[Linux-patched fork of wesbos/amaran-BLE-control](https://github.com/ttiimmaahh/amaran-BLE-control),
+the project that reverse-engineered the mesh protocol.
 
 ```
 Omarchy bar widget  ──HTTP──▶  amaran BLE daemon  ──BLE Mesh──▶  your lights
-   (this repo)                (wesbos/amaran-BLE-control)
+   (this repo)                (ttiimmaahh/amaran-BLE-control fork)
 ```
 
 Because the hop is plain HTTP, the daemon does not have to live on the same
@@ -81,10 +81,10 @@ Click **Set up lights…** in the panel, or run it directly:
 ./tools/amaran-setup
 ```
 
-It clones and installs the [amaran BLE
-daemon](https://github.com/wesbos/amaran-BLE-control) if needed, takes your keys
+It clones and installs the [Linux-patched amaran BLE
+daemon](https://github.com/ttiimmaahh/amaran-BLE-control) if needed, takes your keys
 — imported from step 2, or typed in by hand with hidden input — writes its
-`lights.json` at `0600`, checks the Bluetooth adapter and `CAP_NET_RAW`, and
+`lights.json` at `0600`, checks the Bluetooth adapter and BlueZ state, and
 tells you how to start it.
 
 The widget picks the lights up on its next poll.
@@ -104,9 +104,9 @@ which cannot be made reliable:
   `sudo sh -c 'modprobe -r btusb btmtk; sleep 3; modprobe btusb'`.
 
 The fix is to talk to **BlueZ over D-Bus** — the managed stack that
-CoreBluetooth is analogous to — instead of raw HCI. That needs a patched
-daemon; the stock upstream one will not connect on Linux no matter how many
-capabilities you grant it.
+CoreBluetooth is analogous to — instead of raw HCI. The setup wizard installs a
+patched fork with that transport; the stock upstream one will not connect on
+Linux no matter how many capabilities you grant it.
 
 Once patched, Linux needs **no `setcap` at all**, because BlueZ owns the
 controller. `bluetooth.service` must be running and unmasked — masking it
@@ -134,7 +134,7 @@ Set these on the widget's entry in `~/.config/omarchy/shell.json`; the shell
 hot-reloads on save.
 
 | Setting | Default | What it does |
-|---|---|---|
+| --- | --- | --- |
 | `host` | `127.0.0.1` | Machine running the amaran daemon |
 | `port` | `2708` | Daemon port |
 | `apiKey` | `""` | Sent as `Authorization: Bearer …`; must match the daemon |
@@ -159,7 +159,7 @@ o.bind("SUPER", "K", "exec", "omarchy-shell amaran setBrightness 100")
 ```
 
 | Command | Effect |
-|---|---|
+| --- | --- |
 | `omarchy-shell amaran toggle` | Open/close the panel |
 | `omarchy-shell amaran allOn` / `allOff` / `toggleAll` | Power, every fixture |
 | `omarchy-shell amaran setBrightness <0-100>` | Brightness, every fixture |

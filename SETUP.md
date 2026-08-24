@@ -19,8 +19,9 @@ Before you start, these all need to be true. If one is not, jump to
 4. **The machine that will run the daemon has a working Bluetooth radio.**
    Check with `bluetoothctl list` — empty output means no adapter.
    On Linux the daemon also needs a patched BLE transport that talks to BlueZ
-   over D-Bus; the stock daemon drives raw HCI and will not connect. See
-   "Running the daemon on Linux" in the README.
+   over D-Bus. The setup wizard installs that patched fork; the stock daemon
+   drives raw HCI and will not connect. See "Running the daemon on Linux" in
+   the README.
 5. **Node.js 20 or newer** is installed on that machine.
 
 ## Why keys are needed at all
@@ -133,10 +134,13 @@ so the setup button writes to the right place.
 ## When an assumption does not hold
 
 **No Bluetooth adapter on the Linux machine.** Check `bluetoothctl list`. Empty
-means the kernel sees nothing. On a desktop, look in BIOS under Onboard Devices
-for a Bluetooth Controller toggle, then confirm with
-`sudo dmesg | grep -i bluetooth`. Otherwise: a USB BLE dongle, or run the daemon
-on another machine and set the widget's **host** setting to point at it.
+means the kernel sees nothing. If this is a Windows/Linux dual-boot machine,
+first disable **Windows Fast Startup** and do a full shutdown / power drain;
+it can leave combo Wi-Fi/Bluetooth radios unavailable to Linux. On a desktop,
+then look in BIOS under Onboard Devices for a Bluetooth Controller toggle, and
+confirm with `sudo dmesg | grep -i bluetooth`. Otherwise: a USB BLE dongle, or
+run the daemon on another machine and set the widget's **host** setting to point
+at it.
 
 **No Mac or Windows machine.** amaran Desktop is the only reasonable key source.
 A borrowed machine works — install it, pair the lights, export, uninstall. The
@@ -160,10 +164,15 @@ radio is not reaching the kernel at all. That is a firmware/BIOS/enumeration
 problem, not a daemon one; check `sudo dmesg | grep -i -E 'bluetooth|usb'` for
 errors like `device descriptor read/64, error -110`.
 
-**The daemon cannot open the adapter.** On Linux it needs raw HCI access:
+**The daemon cannot open the adapter.** The patched Linux daemon should talk to
+BlueZ over D-Bus, so Node needs no raw-HCI capabilities. Make sure BlueZ is
+running and unmasked:
 
 ```bash
-sudo setcap cap_net_raw+eip "$(readlink -f "$(which node)")"
+sudo systemctl unmask bluetooth
+sudo systemctl enable --now bluetooth
 ```
 
-Re-run that after every Node upgrade — the capability is on the binary.
+If you are using the stock noble/raw-HCI daemon, stop and switch to the patched
+BlueZ D-Bus daemon described in the README; granting more capabilities still
+leaves BlueZ and noble fighting over the same adapter.

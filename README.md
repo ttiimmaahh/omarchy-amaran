@@ -35,6 +35,8 @@ PC, a Mac on the desk, or an always-on ESP32 bridge.
 1. **A Bluetooth radio** on whichever machine runs the daemon. Check with
    `bluetoothctl list` — no output means no adapter, and no adapter means no
    lights. (An ESP32 bridge brings its own radio; see below.)
+   On Linux, also see [Running the daemon on Linux](#running-the-daemon-on-linux)
+   — the stock daemon does not work there without a patch.
 2. **Your mesh keys.** Joining the mesh needs its network key and application
    key. The only practical source is the amaran Desktop app's database, so you
    need a Mac or Windows machine that has amaran Desktop paired with your
@@ -86,6 +88,29 @@ daemon](https://github.com/wesbos/amaran-BLE-control) if needed, takes your keys
 tells you how to start it.
 
 The widget picks the lights up on its next poll.
+
+### Running the daemon on Linux
+
+The daemon uses [noble](https://github.com/abandonware/noble) for BLE. On macOS
+and Windows that is a thin shim over the OS's managed stack (CoreBluetooth /
+WinRT) and works well. **On Linux noble bypasses BlueZ and drives raw HCI**,
+which cannot be made reliable:
+
+- it never reaches `poweredOn` unless `bluetoothd` is already running;
+- once `bluetoothd` *is* running, the two contend for the connection
+  (`ACL Connection Already Exists`, or a silent hang while connecting);
+- and its raw HCI use can wedge the controller, so scans quietly degrade to
+  finding nothing. Recover with
+  `sudo sh -c 'modprobe -r btusb btmtk; sleep 3; modprobe btusb'`.
+
+The fix is to talk to **BlueZ over D-Bus** — the managed stack that
+CoreBluetooth is analogous to — instead of raw HCI. That needs a patched
+daemon; the stock upstream one will not connect on Linux no matter how many
+capabilities you grant it.
+
+Once patched, Linux needs **no `setcap` at all**, because BlueZ owns the
+controller. `bluetooth.service` must be running and unmasked — masking it
+breaks the daemon, since BlueZ is what powers the adapter.
 
 ### Running the daemon on another machine
 
@@ -172,6 +197,20 @@ Click **Set up lights…**, or read [SETUP.md](SETUP.md).
 
 **"Cannot reach the daemon"** — the daemon is not running or not listening
 where the widget is looking. `curl http://<host>:2708/` from this machine.
+
+**On Linux: the daemon logs "Scanning for lights…" and then nothing at all** —
+noble never reached `poweredOn`, so it is stuck awaiting a promise that cannot
+settle. Nothing is logged because the timeout handler itself awaits noble. See
+[Running the daemon on Linux](#running-the-daemon-on-linux).
+
+**On Linux: `ACL Connection Already Exists (0xb)`, or `le-connection-abort-by-local`** —
+BlueZ and the daemon are both trying to own the link. BlueZ also aborts LE
+connections attempted while a scan is running, and the first connect attempt
+often fails even after discovery stops, so a retry is required.
+
+**On Linux: scans suddenly find nothing** — the controller has wedged. Reload it
+with `sudo sh -c 'modprobe -r btusb btmtk; sleep 3; modprobe btusb'`. A very slow
+`Device setup in … usecs` in `journalctl -k` is the tell.
 
 **`Failed to enable unit: Unit amaran-daemon.service does not exist`** — the
 unit was never installed. Re-run `tools/amaran-setup` and accept the systemd

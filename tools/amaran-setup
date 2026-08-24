@@ -229,18 +229,32 @@ if [[ ${ADAPTERS:-0} -eq 0 ]]; then
   dim "at it with the widget's 'host' setting."
 else
   ok "Bluetooth adapter present ($ADAPTERS)."
-  NODE_BIN=$(readlink -f "$(command -v node)" 2>/dev/null || true)
-  if [[ -n $NODE_BIN ]] && command -v getcap >/dev/null; then
-    if ! getcap "$NODE_BIN" 2>/dev/null | grep -q cap_net_raw; then
-      warn "node lacks CAP_NET_RAW, which the daemon needs for raw HCI access."
-      echo "  sudo setcap cap_net_raw+eip $NODE_BIN"
-      if confirm "Run that now (asks for your password)"; then
-        sudo setcap cap_net_raw+eip "$NODE_BIN" && ok "Capability granted."
-      fi
+
+  # BlueZ must be running: it is what powers the adapter. A D-Bus transport
+  # needs nothing else — no capabilities, because BlueZ owns the controller.
+  if command -v systemctl >/dev/null; then
+    if systemctl is-active --quiet bluetooth; then
+      ok "bluetooth.service is running."
     else
-      ok "node already has CAP_NET_RAW."
+      warn "bluetooth.service is not running — BlueZ is what powers the adapter."
+      echo "  sudo systemctl unmask bluetooth && sudo systemctl enable --now bluetooth"
     fi
   fi
+
+  # The stock upstream daemon uses noble, which on Linux bypasses BlueZ and
+  # drives raw HCI. That needs cap_net_raw AND cap_net_admin just to reach
+  # poweredOn — and even then it contends with BlueZ for the connection. Say so
+  # rather than granting privileges that will not actually make it work.
+  NODE_BIN=$(readlink -f "$(command -v node)" 2>/dev/null || true)
+  if [[ -n $NODE_BIN ]] && command -v getcap >/dev/null; then
+    if getcap "$NODE_BIN" 2>/dev/null | grep -q cap_net_raw; then
+      dim "node currently holds raw-HCI capabilities. A BlueZ D-Bus transport"
+      dim "does not need them; you can drop them with:"
+      dim "  sudo setcap -r $NODE_BIN"
+    fi
+  fi
+  dim "On Linux the daemon needs a BlueZ D-Bus transport; the stock upstream"
+  dim "daemon drives raw HCI and will not connect. See the README."
 fi
 
 echo

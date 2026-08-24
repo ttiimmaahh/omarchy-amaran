@@ -18,6 +18,9 @@ Before you start, these all need to be true. If one is not, jump to
    for the keys. You need it once, not forever.
 4. **The machine that will run the daemon has a working Bluetooth radio.**
    Check with `bluetoothctl list` — empty output means no adapter.
+   On Linux the daemon also needs a patched BLE transport that talks to BlueZ
+   over D-Bus; the stock daemon drives raw HCI and will not connect. See
+   "Running the daemon on Linux" in the README.
 5. **Node.js 20 or newer** is installed on that machine.
 
 ## Why keys are needed at all
